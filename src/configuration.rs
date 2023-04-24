@@ -1,6 +1,6 @@
 #[derive(serde::Deserialize)]
 pub struct Settings {
-    pub database: String,
+    pub database: DatabaseSettings,
     pub app_port: String
 }
 
@@ -20,5 +20,14 @@ pub fn get_configuration() -> Result<Settings, config::ConfigError> {
         )
         .build()?;
     settings.try_deserialize::<Settings>()
+}
+
+impl DatabaseSettings {
+    pub fn connection_string(&self) -> String {
+        format!(
+            "postgres://{}:{}@{}:{}/{}",
+            self.username, self.password, self.host, self.port, self.database_name
+        )
+    }
 }
 

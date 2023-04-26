@@ -1,11 +1,11 @@
 use std::net::TcpListener;
 
-use actix_web::{App, HttpServer, web};
 use actix_web::dev::Server;
+use actix_web::{web, App, HttpServer};
 
+pub mod configuration;
 mod routes;
 mod startup;
-pub mod configuration;
 
 pub fn run(listener: TcpListener) -> Result<Server, std::io::Error> {
     let server = HttpServer::new(|| {
@@ -13,7 +13,7 @@ pub fn run(listener: TcpListener) -> Result<Server, std::io::Error> {
             .route("/health_check", web::get().to(routes::health_check))
             .route("/subscriptions", web::post().to(routes::subscribe))
     })
-        .listen(listener)?
-        .run();
+    .listen(listener)?
+    .run();
     Ok(server)
 }

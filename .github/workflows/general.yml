@@ -8,11 +8,11 @@ on:
   # this specific branch (a.k.a. book chapter).
   push:
     branches:
-      - chapter_3
+      - chapter_4
   pull_request:
     types: [ opened, synchronize, reopened ]
     branches:
-      - chapter_3
+      - chapter_4
 
 env:
   CARGO_TERM_COLOR: always

@@ -1,8 +1,29 @@
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use std::net::TcpListener;
+use once_cell::sync::Lazy;
+use secrecy::ExposeSecret;
 use uuid::Uuid;
 use zero2prod::configuration::{get_configuration, DatabaseSettings};
 use zero2prod::startup::run;
+use zero2prod::telemetry::{get_subscriber, init_subscriber};
+
+static TRACING: Lazy<()> = Lazy::new(|| {
+    if  std::env::var("TEST_LOG").is_ok() {
+        let subscriber = get_subscriber(
+            "test".into(),
+            "info".into(),
+            std::io::stdout
+        );
+        init_subscriber(subscriber);
+    } else {
+        let subscriber = get_subscriber(
+            "test".into(),
+            "info".into(),
+            std::io::sink
+        );
+        init_subscriber(subscriber);
+    };
+});
 
 pub struct TestApp {
     pub address: String,
@@ -10,6 +31,7 @@ pub struct TestApp {
 }
 
 async fn spawn_app() -> TestApp {
+    Lazy::force(&TRACING);
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind random port.");
     let port = listener.local_addr().unwrap().port();
     let address = format!("http://127.0.0.1:{}", port);
@@ -28,14 +50,14 @@ async fn spawn_app() -> TestApp {
 }
 
 pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
-    let mut connection = PgConnection::connect(&config.connection_string_without_db())
+    let mut connection = PgConnection::connect(&config.connection_string_without_db().expose_secret())
         .await
         .expect("Failed to connect to Postgres");
     connection
         .execute(format!(r#"create database "{}";"#, config.database_name).as_str())
         .await
         .expect("Faild to cteate database");
-    let connection_pool = PgPool::connect(&config.connection_string())
+    let connection_pool = PgPool::connect(&config.connection_string().expose_secret())
         .await
         .expect("Failed to connect to Postgres");
 
@@ -67,7 +89,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     let test_app = spawn_app().await;
     let config = get_configuration().expect("Failed to read configuration.");
     let connection_string = config.database.connection_string();
-    let mut connection = PgConnection::connect(&connection_string)
+    let connection = PgConnection::connect(connection_string.expose_secret())
         .await
         .expect("Failed to connect to Postgres.");
     let client = reqwest::Client::new();
@@ -93,7 +115,6 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
 #[tokio::test]
 async fn subscribe_returns_a_400_when_data_is_missing() {
     let test_app = spawn_app().await;
-    let config = get_configuration().expect("Failed to read configuration.");
     let client = reqwest::Client::new();
     let test_cases = vec![
         ("name=le%20guin", "missing the email"),

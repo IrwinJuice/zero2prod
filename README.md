@@ -1,14 +1,29 @@
 ## Faster linking
 
-https://github.com/rui314/mold
 
-```shell
-sudo dnf install mold
-```
+On Windows
 
 ```shell
 nvim ~/.cargo/config.toml
 ```
+```
+
+cargo install -f cargo-binutils
+rustup component add llvm-tools-preview
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
+[target.x86_64-pc-windows-gnu]
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+```
+
+Fedora 
+
+```shell
+sudo dnf install mold
+```
+https://github.com/rui314/mold
 ```
 [target.x86_64-unknown-linux-gnu]
 linker = "clang"
